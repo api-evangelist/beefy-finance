@@ -1,0 +1,41 @@
+name: Beefy Finance
+description: Beefy Finance is a decentralized, multichain yield optimizer platform that allows users to earn compound interest on their crypto holdings through automated vaults and strategies.
+image: https://kinlane-productions2.s3.amazonaws.com/apis-json/apis-json-logo.jpg
+url: https://beefy.com
+created: "2026-06-14"
+modified: "2026-06-14"
+specificationVersion: "0.18"
+tags:
+  - DeFi
+  - Yield Optimizer
+  - Multichain
+  - Blockchain
+  - Ethereum
+  - Arbitrum
+  - Optimism
+  - Polygon
+  - BNB Chain
+apis:
+  - name: Beefy Finance GraphQL API
+    description: GraphQL subgraph API for querying Beefy Finance protocol data including vaults, investors, positions, harvests, and TVL snapshots across multiple chains via The Graph protocol.
+    image: https://kinlane-productions2.s3.amazonaws.com/apis-json/apis-json-logo.jpg
+    humanURL: https://beefy.com/
+    baseURL: https://api.thegraph.com/subgraphs/name/beefyfinance
+    tags:
+      - GraphQL
+      - Subgraph
+      - The Graph
+      - DeFi
+    properties:
+      - type: GraphQL
+        url: graphql/beefy-finance-graphql.md
+      - type: GraphQLSchema
+        url: graphql/beefy-finance-schema.graphql
+    contact:
+      - FN: Beefy Finance
+        url: https://beefy.com
+        email: hello@beefy.com
+maintainers:
+  - FN: API Evangelist
+    url: http://apievangelist.com
+    email: info@apievangelist.com

@@ -1,0 +1,1233 @@
+################################
+##### Common Entities ##########
+################################
+
+enum ProductLifecycle {
+  "The product is in the process of being initialized"
+  INITIALIZING
+  "The product is able to accept deposits and earn yield"
+  RUNNING
+  "A product can be paused for a variety of reasons, this is always to protect investors funds"
+  PAUSED
+}
+
+"""
+A token is a representation of a fungible asset on the blockchain
+as specified by the ERC20 standard.
+"""
+type Token @entity(immutable: true) {
+  # token address
+  id: Bytes!
+
+  "The token symbol"
+  symbol: String
+  "The token name"
+  name: String
+  "The number of decimals the token uses"
+  decimals: BigInt!
+
+  "All token transfers"
+  transfers: [TokenTransfer!]! @derivedFrom(field: "token")
+}
+
+"""
+A token transfer event, emitted by the ERC20 standard.
+"""
+type TokenTransfer @entity(immutable: true) {
+  "The transaction hash + log index"
+  id: Bytes!
+
+  "The transaction that caused the transfer"
+  transactionHash: Bytes!
+  "The block number the transaction was included in"
+  blockNumber: BigInt!
+  "The timestamp of the block the transaction was included in"
+  blockTimestamp: BigInt!
+  "The log index of the transaction"
+  logIndex: BigInt!
+
+  "The token that was transferred"
+  token: Token!
+  "The address of the sender"
+  from: Bytes!
+  "The address of the receiver"
+  to: Bytes!
+  "The amount of tokens transferred"
+  amount: BigInt!
+}
+
+"""
+A transaction is a record of an event that happened on the blockchain.
+Transactions are identified by their hash.
+"""
+type Transaction @entity(immutable: true) {
+  "The transaction hash"
+  id: Bytes!
+
+  "The block number the transaction was included in"
+  blockNumber: BigInt!
+  "The timestamp of the block the transaction was included in"
+  blockTimestamp: BigInt!
+
+  "The address of the sender of the transaction"
+  sender: Bytes!
+}
+
+"""
+A clock tick is a record of time passing.
+This is used to update the protocol's stats at regular intervals.
+"""
+type ClockTick @entity(immutable: true) {
+  "truncated timestamp + tick period"
+  id: Bytes!
+
+  """
+  Duration of the snapshot period in seconds.
+  Available periods:
+  - 15 minutes: 900
+  - 1 day: 86400
+  """
+  period: BigInt!
+  "Timestamp the tick was initiated at, rounded to period"
+  roundedTimestamp: BigInt!
+  "Actual timestamp tick was initiated at"
+  timestamp: BigInt!
+}
+
+type Investor @entity {
+  "The investor address"
+  id: Bytes!
+
+  "All investor beefy positions"
+  positions: [ClmPosition!]! @derivedFrom(field: "investor")
+  "All investor interactions"
+  interactions: [ClmPositionInteraction!]! @derivedFrom(field: "investor")
+
+  "All investor classic positions"
+  classicPositions: [ClassicPosition!]! @derivedFrom(field: "investor")
+  "All investor classic snapshots"
+  classicSnapshots: [ClassicPositionSnapshot!]! @derivedFrom(field: "investor")
+  "All investor classic interactions"
+  classicInteractions: [ClassicPositionInteraction!]! @derivedFrom(field: "investor")
+
+  "All investor clm positions"
+  clmPositions: [ClmPosition!]! @derivedFrom(field: "investor")
+  "All investor clm snapshots"
+  clmSnapshots: [ClmPositionSnapshot!]! @derivedFrom(field: "investor")
+  "All investor clm interactions"
+  clmInteractions: [ClmPositionInteraction!]! @derivedFrom(field: "investor")
+}
+
+"""
+The Protocol entity is the main entity of the Beefy Finance subgraph.
+It represents the Beefy Finance protocol.
+This is where all stats and data about the protocol is stored.
+"""
+type Protocol @entity {
+  """
+  The protocol identifier:
+  - 1: Beefy
+  - 2: CLM
+  """
+  id: Bytes!
+
+  "Protocol name"
+  name: String!
+
+  "All CLM in the protocol"
+  clms: [CLM!]! @derivedFrom(field: "protocol")
+
+  "All Classic in the protocol"
+  classics: [Classic!]! @derivedFrom(field: "protocol")
+}
+
+#################################
+##### Beefy Classic Contracts ###
+#################################
+
+"""
+Beefy classic products are the original vaults and strategies.
+Those are building on top of another prodocol like PancakeSwap, SushiSwap, etc.
+
+TODO: find a better name for this entity
+"""
+type Classic @entity {
+  "The vault address"
+  id: Bytes!
+
+  "The protocol the vault belongs to"
+  protocol: Protocol!
+  "The vault"
+  vault: ClassicVault!
+  "The vault strategy"
+  strategy: ClassicStrategy!
+
+  "The vault boosts"
+  boosts: [ClassicBoost!]! @derivedFrom(field: "classic")
+  "The reward pools of this vault"
+  rewardPools: [ClassicRewardPool!]! @derivedFrom(field: "classic")
+  "The adapters of this vault"
+  erc4626Adapters: [ClassicErc4626Adapter!]! @derivedFrom(field: "classic")
+
+  "The current lifecycle status of the vault"
+  lifecycle: ProductLifecycle!
+
+  "The vault's share token"
+  vaultSharesToken: Token!
+  "The reward pool tokens of the CLM. This is where the CLM's earnings are sent if the CLM does not automatically compound."
+  rewardPoolTokens: [Token!]!
+  "The reward pool token addresses of the CLM. This is the source of truth for other tables reward ordering."
+  rewardPoolTokensOrder: [Bytes!]!
+  "The ERC4626 adapter tokens"
+  erc4626AdapterTokens: [Token!]!
+  "The ERC4626 adapter token addresses. This is the source of truth for other tables adapter ordering."
+  erc4626AdapterTokensOrder: [Bytes!]!
+
+  "The vault's underlying platform"
+  underlyingPlatform: String!
+  "The vault's underlying LP token"
+  underlyingToken: Token!
+  "The vault underlying token breakdown. If that token is composed of multiple tokens, they are listed here."
+  underlyingBreakdownTokens: [Token!]!
+  "The vault underlying token breakdown addresses. This is the source of truth for other tables breakdown ordering."
+  underlyingBreakdownTokensOrder: [Bytes!]!
+
+  "The boost tokens of the vault. Tokens earned by staking in the boost."
+  boostRewardTokens: [Token!]!
+  "The boost token addresses of the vault. This is the source of truth for other tables reward ordering."
+  boostRewardTokensOrder: [Bytes!]!
+  "The reward tokens of the CLM's rewardpool. These will be rewarded to positions when the CLM earns non-compounding yield."
+  rewardTokens: [Token!]!
+  "The reward token addresses of the CLM. This is the source of truth for other tables reward ordering."
+  rewardTokensOrder: [Bytes!]!
+
+  # ----- PRICES & STATS -----
+
+  "The total supply of the vault shares token in circulation. Express with `sharesToken.decimals` decimals."
+  vaultSharesTotalSupply: BigInt!
+  "Latest total supply of the underlying token in the vault. Expressed with `underlyingToken.decimals` decimals."
+  vaultUnderlyingTotalSupply: BigInt!
+  "Latest total supply of the underlying tokens in the vault. Ordered by classic.underlyingBreakdownTokensOrder. Expressed with `underlyingBreakdownTokens[idx].decimals` decimals."
+  vaultUnderlyingBreakdownBalances: [BigInt!]!
+  "Balance of the underlying token in the vault. Express with `underlyingToken.decimals` decimals."
+  vaultUnderlyingBalance: BigInt!
+  "Total supply of the reward pool token. Express with `clm.rewardTokensOrder[idx].decimals` decimals."
+  rewardPoolsTotalSupply: [BigInt!]!
+  "Total supply of the ERC4626 adapter token. Express with `erc4626AdapterTokens[idx].decimals` decimals."
+  erc4626AdaptersTotalSupply: [BigInt!]!
+  "Share balances of the ERC4626 adapter tokens. Ordered by classic.erc4626AdapterTokensOrder. Express with `vaultSharesToken.decimals` decimals."
+  erc4626AdapterVaultSharesBalances: [BigInt!]!
+
+  "Latest LP token price in native we have seen. Expressed with 18 decimals."
+  underlyingToNativePrice: BigInt!
+  "Latest underlying token prices in native we have seen. Ordered by classic.underlyingBreakdownTokensOrder. Expressed with 18 decimals."
+  underlyingBreakdownToNativePrices: [BigInt!]!
+  "Latest boost token prices in native we have seen. Ordered by classic.boostRewardTokensOrder. Expressed with 18 decimals."
+  boostRewardToNativePrices: [BigInt!]!
+  "Latest reward token prices in native we have seen. Ordered by classic.rewardTokensOrder. Expressed with 18 decimals."
+  rewardToNativePrices: [BigInt!]!
+  "Latest native token price we have seen. Expressed with 18 decimals."
+  nativeToUSDPrice: BigInt!
+
+  "Amount of underlying token in the vault"
+  underlyingAmount: BigInt!
+
+  "Total amount of charged call fees"
+  totalCallFees: BigInt!
+  "Total amount of charged beefy fees"
+  totalBeefyFees: BigInt!
+  "Total amount of charged strategist fees"
+  totalStrategistFees: BigInt!
+
+  "All positions in the Classic"
+  positions: [ClassicPosition!]! @derivedFrom(field: "classic")
+
+  "All snapshots of the Classic's positions"
+  positionSnapshots: [ClassicPositionSnapshot!]! @derivedFrom(field: "classic")
+
+  "All harvest events of the Classic"
+  harvests: [ClassicHarvestEvent!]! @derivedFrom(field: "classic")
+
+  "Snapshot of the Classic's stats"
+  snapshots: [ClassicSnapshot!]! @derivedFrom(field: "classic")
+
+  "All Classic interactions for this Classic"
+  interactions: [ClassicPositionInteraction!]! @derivedFrom(field: "classic")
+}
+
+"""
+A snapshot of the Classic's stats.
+Any event that happens in the Classic is recorded in a snapshot.
+We keep multiple snapshots time frames as noted by the "period" field.
+Snapshots include: daily, weekly, yearly.
+"""
+type ClassicSnapshot @entity {
+  "Classic.id + period + timestamp"
+  id: Bytes!
+
+  "The Classic the snapshot is for"
+  classic: Classic!
+
+  """
+  Duration of the snapshot period in seconds.
+  Available periods:
+  - 1 day: 86400
+  - 1 week: 604800
+  - 1 year: 31536000
+  """
+  period: BigInt!
+  "Timestamp the snapshot was initiated at, rounded to period"
+  roundedTimestamp: BigInt!
+  "Actual timestamp snapshot was initiated at"
+  timestamp: BigInt!
+
+  "The total supply of the vault shares token in circulation. Express with `sharesToken.decimals` decimals."
+  vaultSharesTotalSupply: BigInt!
+  "Latest total supply of the underlying token in the vault. Expressed with `underlyingToken.decimals` decimals."
+  vaultUnderlyingTotalSupply: BigInt!
+  "Latest total supply of the underlying tokens in the vault. Ordered by classic.underlyingBreakdownTokensOrder. Expressed with `underlyingBreakdownTokens[idx].decimals` decimals."
+  vaultUnderlyingBreakdownBalances: [BigInt!]!
+  "Balance of the underlying token in the vault at the time of snapshot. Express with `underlyingToken.decimals` decimals."
+  vaultUnderlyingBalance: BigInt!
+  "Total supply of the reward pool token. Ordered by clm.rewardTokensOrder. Express with `clm.rewardTokensOrder[idx].decimals` decimals."
+  rewardPoolsTotalSupply: [BigInt!]!
+  "Total supply of the ERC4626 adapter token. Express with `erc4626AdapterTokens[idx].decimals` decimals."
+  erc4626AdaptersTotalSupply: [BigInt!]!
+  "Share balances of the ERC4626 adapter tokens. Ordered by classic.erc4626AdapterTokensOrder. Express with `vaultSharesToken.decimals` decimals."
+  erc4626AdapterVaultSharesBalances: [BigInt!]!
+
+  "Latest LP token price in native of this snapshot. Expressed with 18 decimals."
+  underlyingToNativePrice: BigInt!
+  "Latest underlying token prices in native of this snapshot. Ordered by classic.underlyingBreakdownTokensOrder. Expressed with 18 decimals."
+  underlyingBreakdownToNativePrices: [BigInt!]!
+  "Latest boost token prices in native of this snapshot. Ordered by classic.boostRewardTokensOrder. Expressed with 18 decimals."
+  boostRewardToNativePrices: [BigInt!]!
+  "Latest reward token prices in native of this snapshot. Ordered by classic.rewardTokensOrder. Expressed with 18 decimals."
+  rewardToNativePrices: [BigInt!]!
+  "Latest native token price of this snapshot. Expressed with 18 decimals."
+  nativeToUSDPrice: BigInt!
+
+  "Total amount of charged call fees in this snapshot"
+  totalCallFees: BigInt!
+  "Total amount of charged beefy fees in this snapshot"
+  totalBeefyFees: BigInt!
+  "Total amount of charged strategist fees in this snapshot"
+  totalStrategistFees: BigInt!
+
+  "Amount of underlying tokens in the vault"
+  underlyingAmount: BigInt!
+}
+
+"""
+A vault is a contract that manages the assets of a Beefy product.
+This entity is mostly used to start tracking the events and link them to the Beefy product on new event
+"""
+type ClassicVault @entity {
+  "The strategy address"
+  id: Bytes!
+  "The classic product the vault belongs to"
+  classic: Classic!
+  "The transaction that created the strategy"
+  createdWith: Transaction!
+  "Technical field to remember if the strategy was already initialized"
+  isInitialized: Boolean!
+}
+
+"""
+A strategy is a contract that manages the assets of a Beefy product.
+This entity is mostly used to start tracking the events and link them to the Beefy product on new event
+"""
+type ClassicStrategy @entity {
+  "The strategy address"
+  id: Bytes!
+  "The classic product the strategy belongs to"
+  classic: Classic!
+  "The vault the strategy is managing"
+  vault: ClassicVault!
+  "The transaction that created the strategy"
+  createdWith: Transaction!
+  "Technical field to remember if the strategy was already initialized"
+  isInitialized: Boolean!
+}
+
+"""
+A boost is a contract that manages the assets of a Beefy product.
+This entity is mostly used to start tracking the events and link them to the Beefy product on new event
+"""
+type ClassicBoost @entity {
+  "The boost address"
+  id: Bytes!
+  "The classic product the strategy belongs to"
+  classic: Classic!
+  "The vault the boost is managing"
+  vault: ClassicVault!
+  "The transaction that created the strategy"
+  createdWith: Transaction!
+  "The boost reward token"
+  rewardToken: Token!
+  "Technical field to remember if the strategy was already initialized"
+  isInitialized: Boolean!
+}
+
+"""
+Some Classic do not automatically compound their earnings. Those earnings are sent to the reward pool instead.
+This entity is mostly used to start tracking the events and link them to the Classic on new event
+"""
+type ClassicRewardPool @entity {
+  "The strategy address"
+  id: Bytes!
+  "The classic product the reward pool is for"
+  classic: Classic!
+  "The vault the reward pool is linked to"
+  vault: ClassicVault!
+  "The transaction that created the reward pool"
+  createdWith: Transaction!
+  "Technical field to remember if the strategy was already initialized"
+  isInitialized: Boolean!
+}
+
+"""
+An adapter is a wrapping contract that allows a classic vault to be used as an ERC4626 vault.
+One share of the adapter is equal to one share of the classic vault.
+"""
+type ClassicErc4626Adapter @entity {
+  "The adapter address"
+  id: Bytes!
+  "The classic product the adapter belongs to"
+  classic: Classic!
+  "The vault the adapter is managing"
+  vault: ClassicVault!
+  "The transaction that created the adapter"
+  createdWith: Transaction!
+  "Technical field to remember if the adapter was already initialized"
+  isInitialized: Boolean!
+}
+
+"""
+Classic products are harvested by the strategy. This event is emitted when the strategy harvests the vault.
+"""
+type ClassicHarvestEvent @entity(immutable: true) {
+  "transaction hash + log index"
+  id: Bytes!
+
+  "The Classic the harvest event is for"
+  classic: Classic!
+  "The strategy that harvested the vault"
+  strategy: ClassicStrategy!
+
+  "The transaction that created the harvest event"
+  createdWith: Transaction!
+  "The event log index in the transaction that created the harvest event."
+  logIndex: BigInt!
+  "The block number of the harvest event"
+  blockNumber: BigInt!
+  "The timestamp of the harvest event so you can sort by time"
+  timestamp: BigInt!
+
+  "Underlying balance after the harvest"
+  underlyingAmount: BigInt!
+  "The amount of underlying tokens compounded"
+  compoundedAmount: BigInt!
+
+  "Total amount of liquidity in the vault at time of harvest"
+  vaultSharesTotalSupply: BigInt!
+  "Total amount of reward pool shares at time of harvest. Ordered by classic.rewardPoolTokensOrder."
+  rewardPoolsTotalSupply: [BigInt!]!
+
+  "LP token price in native at the time of harvest. Expressed with 18 decimals."
+  underlyingToNativePrice: BigInt!
+  "Boost token prices in native at the time of harvest. Ordered by classic.boostRewardTokensOrder. Expressed with 18 decimals."
+  boostRewardToNativePrices: [BigInt!]!
+  "Reward token prices in native at the time of harvest. Ordered by classic.rewardTokensOrder. Expressed with 18 decimals."
+  rewardToNativePrices: [BigInt!]!
+  "Native token price at the time of harvest. Expressed with 18 decimals."
+  nativeToUSDPrice: BigInt!
+}
+
+"""
+This event is emitted when we collect earned trading fees from the underlying pool.
+"""
+type ClassicPosition @entity {
+  "Classic.id + investor address"
+  id: Bytes!
+
+  "The Classic the investor has a position in"
+  classic: Classic!
+  "The investor that has a position in the Classic"
+  investor: Investor!
+  "The transaction that created the investor position"
+  createdWith: Transaction!
+
+  "The amount of vault shares the investor holds directly"
+  vaultBalance: BigInt!
+  "The amount of vault shares the investor holds in a boost"
+  boostBalance: BigInt!
+  "Amount of reward pool shares the investor holds. Ordered by clm.rewardPoolTokensOrder."
+  rewardPoolBalances: [BigInt!]!
+  "Amount of ERC4626 adapter shares the investor holds. Ordered by classic.erc4626AdapterTokensOrder."
+  erc4626AdapterBalances: [BigInt!]!
+  "Amount of vault shares the investor holds in the ERC4626 adapter. Ordered by classic.erc4626AdapterTokensOrder."
+  erc4626AdapterVaultSharesBalances: [BigInt!]!
+  "Total amount of vault shares the investor holds. Should always equal vaultBalance + boostBalance. This is mostly used for filtering."
+  totalBalance: BigInt!
+
+  "All investor position interactions"
+  interactions: [ClassicPositionInteraction!]! @derivedFrom(field: "investorPosition")
+
+  "All snapshots of the investor position"
+  snapshots: [ClassicPositionSnapshot!]! @derivedFrom(field: "investorPosition")
+}
+
+enum ClassicPositionInteractionType {
+  "The investor deposited funds into the vault"
+  VAULT_DEPOSIT
+  "The investor withdrew funds from the vault"
+  VAULT_WITHDRAW
+  "The investor staked in the boost of the vault and received boost shares"
+  BOOST_STAKE
+  "The investor unstaked from the boost of the vault and received vault shares"
+  BOOST_UNSTAKE
+  "The investor claimed their rewards from the vault"
+  BOOST_REWARD_CLAIM
+  "The investor staked in the reward pool of the CLM and received reward pool shares"
+  CLASSIC_REWARD_POOL_STAKE
+  "The investor unstaked from the reward pool of the CLM and received underlying tokens"
+  CLASSIC_REWARD_POOL_UNSTAKE
+  "The investor claimed their rewards from the reward pool of the CLM"
+  CLASSIC_REWARD_POOL_CLAIM
+  "The investor deposited funds into the ERC4626 adapter"
+  CLASSIC_ERC4626_ADAPTER_STAKE
+  "The investor withdrew funds from the ERC4626 adapter"
+  CLASSIC_ERC4626_ADAPTER_UNSTAKE
+}
+
+type ClassicPositionInteraction @entity(immutable: true) {
+  "transaction hash + event log index"
+  id: Bytes!
+
+  "The Classic the investor has a position in"
+  classic: Classic!
+  "The investor that has a position in the Classic"
+  investor: Investor!
+  "The investor position the interaction is for"
+  investorPosition: ClassicPosition!
+
+  "The transaction that created the investor position interaction"
+  createdWith: Transaction!
+  "The event log index in the transaction that created the interaction."
+  logIndex: BigInt!
+  "Block number of the interaction"
+  blockNumber: BigInt!
+  "The timestamp of the interaction"
+  timestamp: BigInt!
+
+  "The type of the interaction"
+  type: ClassicPositionInteractionType!
+
+  "The amount of vault shares the investor holds directly at the time of the interaction"
+  vaultBalance: BigInt!
+  "The amount of vault shares the investor holds in a boost at the time of the interaction"
+  boostBalance: BigInt!
+  "The amount of reward pool shares the investor holds at the time of the interaction. Ordered by clm.rewardPoolTokensOrder."
+  rewardPoolBalances: [BigInt!]!
+  "The amount of ERC4626 adapter shares the investor holds at the time of the interaction. Ordered by classic.erc4626AdapterTokensOrder."
+  erc4626AdapterBalances: [BigInt!]!
+  "The amount of vault shares the investor holds in the ERC4626 adapter at the time of the interaction. Ordered by classic.erc4626AdapterTokensOrder."
+  erc4626AdapterVaultSharesBalances: [BigInt!]!
+  "Total amount of vault shares the investor holds. Should always equal vaultBalance + boostBalance. This is mostly used for filtering."
+  totalBalance: BigInt!
+
+  "The vault total supply of shares at the time of the interaction"
+  vaultSharesTotalSupply: BigInt!
+  "The underlying token total supply at the time of the interaction"
+  vaultUnderlyingTotalSupply: BigInt!
+  "The underlying breakdown token balances at the time of the interaction. Ordered by classic.underlyingBreakdownTokensOrder."
+  vaultUnderlyingBreakdownBalances: [BigInt!]!
+  "The amount of underlying the vault contains at the time of the interaction"
+  vaultUnderlyingAmount: BigInt!
+  "The amount of underlying the vault contains at the time of the interaction"
+  vaultUnderlyingBalance: BigInt!
+
+  "Amount of vault shares change in the interaction"
+  vaultBalanceDelta: BigInt!
+  "Amount of vault shares token change on the boost contract in the interaction"
+  boostBalanceDelta: BigInt!
+  "Amount of boost tokens change in the interaction. Ordered by classic.boostRewardTokensOrder."
+  boostRewardBalancesDelta: [BigInt!]!
+  "Amount of reward pool shares change in the interaction. Ordered by clm.rewardPoolTokensOrder."
+  rewardPoolBalancesDelta: [BigInt!]!
+  "Amount of reward tokens change in the interaction. Ordered by clm.rewardTokensOrder."
+  rewardBalancesDelta: [BigInt!]!
+  "Amount of ERC4626 adapter shares change in the interaction. Ordered by classic.erc4626AdapterTokensOrder."
+  erc4626AdapterBalancesDelta: [BigInt!]!
+  "Amount of ERC4626 adapter shares the investor holds in the ERC4626 adapter at the time of the interaction. Ordered by classic.erc4626AdapterTokensOrder."
+  erc4626AdapterVaultSharesBalancesDelta: [BigInt!]!
+
+  "LP token price in native at the time of the interaction. Expressed with 18 decimals."
+  underlyingToNativePrice: BigInt!
+  "Breakdown token prices in native at the time of the interaction. Expressed with 18 decimals. Ordered by clm.underlyingBreakdownTokensOrder."
+  underlyingBreakdownToNativePrices: [BigInt!]!
+  "Boost token prices in native at the time of the interaction. Ordered by classic.boostRewardTokensOrder. Expressed with 18 decimals."
+  boostRewardToNativePrices: [BigInt!]!
+  "Reward token prices in native at the time of the interaction. Expressed with 18 decimals. Ordered by clm.rewardTokensOrder."
+  rewardToNativePrices: [BigInt!]!
+  "Native token price at the time of the interaction. Expressed with 18 decimals."
+  nativeToUSDPrice: BigInt!
+}
+
+"""
+A snapshot of an investor's Classic position stats.
+Any event that happens to the position is recorded in a snapshot.
+We keep multiple snapshots time frames as noted by the "period" field.
+Snapshots include: daily, weekly, yearly.
+"""
+type ClassicPositionSnapshot @entity {
+  "ClassicPosition.id + period + timestamp"
+  id: Bytes!
+
+  "The Classic the snapshot is for"
+  classic: Classic!
+  "The investor that has a position in the Classic"
+  investor: Investor!
+  "The investor position the snapshot is for"
+  investorPosition: ClassicPosition!
+
+  """
+  Duration of the snapshot period in seconds.
+  Available periods:
+  - 1 day: 86400
+  - 1 week: 604800
+  - 1 year: 31536000
+  """
+  period: BigInt!
+  "Timestamp the snapshot was initiated at, rounded to period"
+  roundedTimestamp: BigInt!
+  "Actual timestamp snapshot was initiated at"
+  timestamp: BigInt!
+
+  "The amount of vault shares the investor holds directly"
+  vaultBalance: BigInt!
+  "The amount of vault shares the investor holds in a boost"
+  boostBalance: BigInt!
+  "Amount of reward pool shares the investor holds. Ordered by clm.rewardPoolTokensOrder."
+  rewardPoolBalances: [BigInt!]!
+  "Amount of ERC4626 adapter shares the investor holds. Ordered by classic.erc4626AdapterTokensOrder."
+  erc4626AdapterBalances: [BigInt!]!
+  "Amount of vault shares the investor holds in the ERC4626 adapter. Ordered by classic.erc4626AdapterTokensOrder."
+  erc4626AdapterVaultSharesBalances: [BigInt!]!
+  "Total amount of vault shares the investor holds. Should always equal vaultBalance + boostBalance."
+  totalBalance: BigInt!
+
+  "The total supply of the vault shares token in circulation at the time of snapshot. Express with `sharesToken.decimals` decimals."
+  vaultSharesTotalSupply: BigInt!
+  "The total supply of the underlying token in the vault at the time of snapshot. Express with `underlyingToken.decimals` decimals."
+  vaultUnderlyingTotalSupply: BigInt!
+  "Balance of the underlying token in the vault at the time of snapshot. Express with `underlyingToken.decimals` decimals."
+  vaultUnderlyingBalance: BigInt!
+  "The total supply of the underlying tokens in the vault at the time of snapshot. Ordered by classic.underlyingBreakdownTokensOrder. Express with `underlyingBreakdownTokens[idx].decimals` decimals."
+  vaultUnderlyingBreakdownBalances: [BigInt!]!
+
+  "LP token price in native at the time of snapshot. Expressed with 18 decimals."
+  underlyingToNativePrice: BigInt!
+  "Breakdown token prices in native at the time of snapshot. Ordered by classic.underlyingBreakdownTokensOrder. Expressed with 18 decimals."
+  underlyingBreakdownToNativePrices: [BigInt!]!
+  "Boost token prices in native at the time of snapshot. Ordered by classic.boostRewardTokensOrder. Expressed with 18 decimals."
+  boostRewardToNativePrices: [BigInt!]!
+  "Reward token prices in native at the time of snapshot. Ordered by classic.rewardTokensOrder. Expressed with 18 decimals."
+  rewardToNativePrices: [BigInt!]!
+  "Native token price at the time of snapshot. Expressed with 18 decimals."
+  nativeToUSDPrice: BigInt!
+}
+
+#######################
+##### CLM Contracts ###
+#######################
+
+type CLM @entity {
+  "The CL Manager address"
+  id: Bytes!
+
+  "The protocol the CLM belongs to"
+  protocol: Protocol!
+  "The manager of the CLM. The manager is responsible for accounting of a CLM."
+  manager: ClmManager!
+  "The strategy of the CLM. The strategy is responsible for managing the CLM's assets."
+  strategy: ClmStrategy!
+  "The underlying protocol pool contract address where liquidity is deposited"
+  underlyingProtocolPool: Bytes!
+  """
+  The reward pool of the CLM.
+  The reward pool is where the CLM's earnings are sent if the ClmManager does not automatically compound.
+  It only makes sense to have one reward pool per CLM, but it is possible to have multiple by design.
+  """
+  rewardPools: [ClmRewardPool!]! @derivedFrom(field: "clm")
+
+  "The current lifecycle status of the CLM"
+  lifecycle: ProductLifecycle!
+
+  "The manager token data of the CLM. The ClmManager is also an ERC20 token. This tokens represents the shares of the manager."
+  managerToken: Token!
+  "The reward pool tokens of the CLM. This is where the CLM's earnings are sent if the CLM does not automatically compound."
+  rewardPoolTokens: [Token!]!
+  "The reward pool token addresses of the CLM. This is the source of truth for other tables reward ordering."
+  rewardPoolTokensOrder: [Bytes!]!
+
+  "The underlying tokens contained in the CLM. This is the first token."
+  underlyingToken0: Token!
+  "The underlying tokens contained in the CLM. This is the second token."
+  underlyingToken1: Token!
+
+  "The output tokens of the CLM's strategy. These will be sent to the reward pool if the strategy does not automatically compound."
+  outputTokens: [Token!]!
+  "The output token addresses of the CLM. This is the source of truth for other tables output ordering."
+  outputTokensOrder: [Bytes!]!
+  "The reward tokens of the CLM's rewardpool. These will be rewarded to positions when the CLM earns non-compounding yield."
+  rewardTokens: [Token!]!
+  "The reward token addresses of the CLM. This is the source of truth for other tables reward ordering."
+  rewardTokensOrder: [Bytes!]!
+
+  # ----- PRICES & STATS -----
+
+  "The total supply of the CLM shares token in circulation. Express with `managerToken.decimals` decimals."
+  managerTotalSupply: BigInt!
+  "Total supply of the reward pool token. Express with `clm.rewardTokensOrder[idx].decimals` decimals."
+  rewardPoolsTotalSupply: [BigInt!]!
+
+  "Latest token 0 price in native we have seen. Expressed with 18 decimals."
+  token0ToNativePrice: BigInt!
+  "Latest token 1 price in native we have seen. Expressed with 18 decimals."
+  token1ToNativePrice: BigInt!
+  "Latest output token prices in native we have seen. Ordered by clm.outputTokensOrder. Expressed with 18 decimals."
+  outputToNativePrices: [BigInt!]!
+  "Latest reward token prices in native we have seen. Ordered by clm.rewardTokensOrder. Expressed with 18 decimals."
+  rewardToNativePrices: [BigInt!]!
+  "Latest native token price we have seen. Expressed with 18 decimals."
+  nativeToUSDPrice: BigInt!
+
+  """
+  The current price of the token zero expressed as a token1 value.
+  For example, if the CLM is a BTC/ETH CLM, this is the price of 1 BTC in ETH.
+  This is expressed in token1 decimals.
+  """
+  priceOfToken0InToken1: BigInt!
+  "Price range start this CLM is currently configured to operate in, in token 1"
+  priceRangeMin1: BigInt!
+  "Price range end this CLM is currently configured to operate in, in token 1"
+  priceRangeMax1: BigInt!
+
+  "Total amount of token0 in the CLM. Can be slightly higher than main + alt amounts due to vested tokens."
+  totalUnderlyingAmount0: BigInt!
+  "Total amount of token1 in the CLM. Can be slightly higher than main + alt amounts due to vested tokens."
+  totalUnderlyingAmount1: BigInt!
+
+  "Amount of underlying tokens in the CLM assigned to the main position in the first token."
+  underlyingMainAmount0: BigInt!
+  "Amount of underlying tokens in the CLM assigned to the main position in the second token."
+  underlyingMainAmount1: BigInt!
+  "Amount of underlying tokens in the CLM assigned to the alt position in the first token."
+  underlyingAltAmount0: BigInt!
+  "Amount of underlying tokens in the CLM assigned to the alt position in the second token."
+  underlyingAltAmount1: BigInt!
+
+  "Total amount of charged call fees"
+  totalCallFees: BigInt!
+  "Total amount of charged beefy fees"
+  totalBeefyFees: BigInt!
+  "Total amount of charged strategist fees"
+  totalStrategistFees: BigInt!
+
+  "All positions in the CLM"
+  positions: [ClmPosition!]! @derivedFrom(field: "clm")
+
+  "All snapshots of the CLM's positions"
+  positionSnapshots: [ClmPositionSnapshot!]! @derivedFrom(field: "clm")
+
+  "All collections events by the CLM"
+  collections: [ClmManagerCollectionEvent!]! @derivedFrom(field: "clm")
+
+  "All harvest events of the CLM"
+  harvests: [ClmHarvestEvent!]! @derivedFrom(field: "clm")
+
+  "Snapshot of the CLM's stats"
+  snapshots: [ClmSnapshot!]! @derivedFrom(field: "clm")
+
+  "All CLM interactions for this CLM"
+  interactions: [ClmPositionInteraction!]! @derivedFrom(field: "clm")
+
+  "All CLM deposits for this CLM"
+  deposits: [ClmDepositEvent!]! @derivedFrom(field: "clm")
+
+  "All CLM withdrawals for this CLM"
+  withdrawals: [ClmWithdrawEvent!]! @derivedFrom(field: "clm")
+
+  "All CLM TVL events for this CLM"
+  tvlEvents: [ClmStrategyTVLEvent!]! @derivedFrom(field: "clm")
+}
+
+"""
+A snapshot of the CLM's stats.
+Any event that happens in the CLM is recorded in a snapshot.
+We keep multiple snapshots time frames as noted by the "period" field.
+Snapshots include: daily, weekly, yearly.
+"""
+type ClmSnapshot @entity {
+  "CLM.id + period + timestamp"
+  id: Bytes!
+
+  "The CLM the snapshot is for"
+  clm: CLM!
+
+  """
+  Duration of the snapshot period in seconds.
+  Available periods:
+  - 1 day: 86400
+  - 1 week: 604800
+  - 1 year: 31536000
+  """
+  period: BigInt!
+  "Timestamp the snapshot was initiated at, rounded to period"
+  roundedTimestamp: BigInt!
+  "Actual timestamp snapshot was initiated at"
+  timestamp: BigInt!
+
+  "The total supply of the manager token in circulation. Express with `sharesToken.decimals` decimals."
+  managerTotalSupply: BigInt!
+  "Total supply of the reward pool token. Express with `clm.rewardPoolTokensOrder[idx].decimals` decimals."
+  rewardPoolsTotalSupply: [BigInt!]!
+
+  "Latest token 0 price in native of this snapshot. Expressed with 18 decimals."
+  token0ToNativePrice: BigInt!
+  "Latest token 1 price in native of this snapshot. Expressed with 18 decimals."
+  token1ToNativePrice: BigInt!
+  "Latest output token prices in native of this snapshot. Ordered by clm.outputTokensOrder. Expressed with 18 decimals."
+  outputToNativePrices: [BigInt!]!
+  "Latest reward token prices in native of this snapshot. Ordered by clm.rewardTokensOrder. Expressed with 18 decimals."
+  rewardToNativePrices: [BigInt!]!
+  "Latest native token price of this snapshot. Expressed with 18 decimals."
+  nativeToUSDPrice: BigInt!
+
+  """
+  The current price of the token zero expressed as a token1 value.
+  For example, if the CLM is a BTC/ETH CLM, this is the price of 1 BTC in ETH.
+  This is expressed in token1 decimals.
+  """
+  priceOfToken0InToken1: BigInt!
+  "Price range start this CLM is currently configured to operate in, in token 1"
+  priceRangeMin1: BigInt!
+  "Price range end this CLM is currently configured to operate in, in token 1"
+  priceRangeMax1: BigInt!
+
+  "Total amount of token0 in the CLM. Can be slightly higher than main + alt amounts due to vested tokens."
+  totalUnderlyingAmount0: BigInt!
+  "Total amount of token1 in the CLM. Can be slightly higher than main + alt amounts due to vested tokens."
+  totalUnderlyingAmount1: BigInt!
+
+  "Amount of underlying tokens in the CLM assigned to the main position in the first token."
+  underlyingMainAmount0: BigInt!
+  "Amount of underlying tokens in the CLM assigned to the main position in the second token."
+  underlyingMainAmount1: BigInt!
+  "Amount of underlying tokens in the CLM assigned to the alt position in the first token."
+  underlyingAltAmount0: BigInt!
+  "Amount of underlying tokens in the CLM assigned to the alt position in the second token."
+  underlyingAltAmount1: BigInt!
+
+  "Total amount of charged call fees in this snapshot"
+  totalCallFees: BigInt!
+  "Total amount of charged beefy fees in this snapshot"
+  totalBeefyFees: BigInt!
+  "Total amount of charged strategist fees in this snapshot"
+  totalStrategistFees: BigInt!
+}
+
+"""
+A ClmManager handles the accounting of a CLM.
+"""
+type ClmManager @entity {
+  "The CL Manager address"
+  id: Bytes!
+  "The CLM this manager belongs to"
+  clm: CLM!
+  "The transaction that created the manager"
+  createdWith: Transaction!
+  "Technical field to remember if the CLM was already initialized"
+  isInitialized: Boolean!
+}
+
+"""
+A strategy is a contract that manages the assets of a CLM.
+This entity is mostly used to start tracking the events and link them to the CLM on new event
+"""
+type ClmStrategy @entity {
+  "The strategy address"
+  id: Bytes!
+  "The CLM the strategy is managing"
+  clm: CLM!
+  "The manager of the strategy"
+  manager: ClmManager!
+  "The output token sent to the reward pool. Set to NULL token if the strategy automatically compounds."
+  outputToken: Token!
+  "The transaction that created the strategy"
+  createdWith: Transaction!
+  "Technical field to remember if the strategy was already initialized"
+  isInitialized: Boolean!
+}
+
+"""
+Some ClmManager do not automatically compound their earnings. Those earnings are sent to the reward pool instead.
+This entity is mostly used to start tracking the events and link them to the CLM on new event
+"""
+type ClmRewardPool @entity {
+  "The strategy address"
+  id: Bytes!
+  "The CLM the reward pool is for"
+  clm: CLM!
+  "The manager that this reward pool is linked to"
+  manager: ClmManager!
+  "The transaction that created the reward pool"
+  createdWith: Transaction!
+  "Technical field to remember if the strategy was already initialized"
+  isInitialized: Boolean!
+}
+
+"""
+ClmManagers are harvested by the strategy. This event is emitted when the strategy harvests the manager.
+"""
+type ClmHarvestEvent @entity(immutable: true) {
+  "transaction hash + log index"
+  id: Bytes!
+
+  "The CLM the harvest event is for"
+  clm: CLM!
+  "The strategy that harvested the Manager"
+  strategy: ClmStrategy!
+
+  "The transaction that created the harvest event"
+  createdWith: Transaction!
+  "The block number of the harvest event"
+  blockNumber: BigInt!
+  "The event log index in the transaction that created the harvest event."
+  logIndex: BigInt!
+  "The timestamp of the harvest event so you can sort by time"
+  timestamp: BigInt!
+
+  "Underlying balance of the first token after the harvest"
+  underlyingAmount0: BigInt!
+  "Underlying balance of the second token after the harvest"
+  underlyingAmount1: BigInt!
+
+  "The amount of first underlying tokens compounded"
+  compoundedAmount0: BigInt!
+  "The amount of second underlying tokens compounded"
+  compoundedAmount1: BigInt!
+  "The amount of output tokens collected. Ordered by clm.outputTokensOrder."
+  collectedOutputAmounts: [BigInt!]!
+
+  "Total amount of liquidity in the manager at time of harvest"
+  managerTotalSupply: BigInt!
+  "Total amount of reward pool shares at time of harvest. Ordered by clm.rewardPoolTokensOrder."
+  rewardPoolsTotalSupply: [BigInt!]!
+
+  "Token 0 price in native at the time of harvest. Expressed with 18 decimals."
+  token0ToNativePrice: BigInt!
+  "Token 1 price in native at the time of harvest. Expressed with 18 decimals."
+  token1ToNativePrice: BigInt!
+  "Output token prices in native at the time of harvest. Expressed with 18 decimals. Ordered by clm.outputTokensOrder."
+  outputToNativePrices: [BigInt!]!
+  "Reward token prices in native at the time of harvest. Expressed with 18 decimals. Ordered by clm.rewardTokensOrder."
+  rewardToNativePrices: [BigInt!]!
+  "Native token price at the time of harvest. Expressed with 18 decimals."
+  nativeToUSDPrice: BigInt!
+}
+
+"""
+This event is emitted when the strategy's TVL is updated.
+"""
+type ClmStrategyTVLEvent @entity(immutable: true) {
+  "transaction hash + log index"
+  id: Bytes!
+
+  "The CLM the TVL event is for"
+  clm: CLM!
+  "The strategy that the TVL event is for"
+  strategy: ClmStrategy!
+  "The transaction that created the TVL event"
+  createdWith: Transaction!
+  "The event log index in the transaction that created the TVL event."
+  logIndex: BigInt!
+  "The timestamp of the TVL event so you can sort by time"
+  timestamp: BigInt!
+
+  "Underlying balance of the first token after the TVL event"
+  underlyingAmount0: BigInt!
+  "Underlying balance of the second token after the TVL event"
+  underlyingAmount1: BigInt!
+}
+
+"""
+This schema tracks all calls to the `moveTicks` function of the strategy.
+"""
+type ClmDepositEvent @entity(immutable: true) {
+  "strategy address + transaction hash"
+  id: Bytes!
+
+  "The CLM the move tick call is for"
+  clm: CLM!
+  "The transaction that created the move tick call"
+  createdWith: Transaction!
+  "The event log index in the transaction that created the move tick call."
+  logIndex: BigInt!
+  "The block number of the move tick call"
+  blockNumber: BigInt!
+  "The timestamp of the move tick call so you can sort by time"
+  timestamp: BigInt!
+
+  "The investor that deposited the shares"
+  investor: Investor!
+  "The amount of shares deposited"
+  shares: BigInt!
+  "The amount of first underlying tokens deposited"
+  amount0: BigInt!
+  "The amount of second underlying tokens deposited"
+  amount1: BigInt!
+  "The amount of first underlying tokens fees"
+  fee0: BigInt!
+  "The amount of second underlying tokens fees"
+  fee1: BigInt!
+}
+
+"""
+This event is emitted when we collect earned trading fees from the underlying pool.
+"""
+type ClmWithdrawEvent @entity(immutable: true) {
+  "transaction hash + log index"
+  id: Bytes!
+
+  "The CLM the withdraw event is for"
+  clm: CLM!
+  "The transaction that created the withdraw event"
+  createdWith: Transaction!
+  "The event log index in the transaction that created the withdraw event."
+  logIndex: BigInt!
+  "The block number of the withdraw event"
+  blockNumber: BigInt!
+  "The timestamp of the withdraw event so you can sort by time"
+  timestamp: BigInt!
+
+  "The investor that withdrew the shares"
+  investor: Investor!
+  "The amount of shares withdrawn"
+  shares: BigInt!
+  "The amount of first underlying tokens withdrawn"
+  amount0: BigInt!
+  "The amount of second underlying tokens withdrawn"
+  amount1: BigInt!
+}
+
+"""
+This event is emitted when we collect earned trading fees from the underlying pool.
+"""
+type ClmManagerCollectionEvent @entity(immutable: true) {
+  "transaction hash + log index"
+  id: Bytes!
+
+  "The CLM the collect event is for"
+  clm: CLM!
+  "The strategy that collect for the Manager"
+  strategy: ClmStrategy!
+
+  "The transaction that created the collect event"
+  createdWith: Transaction!
+  "The block number of the collection event"
+  blockNumber: BigInt!
+  "The event log index in the transaction that created the collection event."
+  logIndex: BigInt!
+  "The timestamp of the collect event so you can sort by time"
+  timestamp: BigInt!
+
+  "Amount of underlying tokens in the CLM assigned to the main position in the first token."
+  underlyingMainAmount0: BigInt!
+  "Amount of underlying tokens in the CLM assigned to the main position in the second token."
+  underlyingMainAmount1: BigInt!
+  "Amount of underlying tokens in the CLM assigned to the alt position in the first token."
+  underlyingAltAmount0: BigInt!
+  "Amount of underlying tokens in the CLM assigned to the alt position in the second token."
+  underlyingAltAmount1: BigInt!
+  "Underlying balance of the first token after event"
+  underlyingAmount0: BigInt!
+  "Underlying balance of the first token after event"
+  underlyingAmount1: BigInt!
+
+  "Amount of collected fees in the first token"
+  collectedAmount0: BigInt!
+  "Amount of collected fees in the second token"
+  collectedAmount1: BigInt!
+  "Amount of collected fees in the output tokens. Ordered by clm.outputTokensOrder."
+  collectedOutputAmounts: [BigInt!]!
+
+  "Token 0 price in native at the time of the collection. Expressed with 18 decimals."
+  token0ToNativePrice: BigInt!
+  "Token 1 price in native at the time of the collection. Expressed with 18 decimals."
+  token1ToNativePrice: BigInt!
+  "Output token prices in native at the time of the collection. Expressed with 18 decimals. Ordered by clm.outputTokensOrder."
+  outputToNativePrices: [BigInt!]!
+  "Reward token prices in native at the time of the collection. Expressed with 18 decimals. Ordered by clm.rewardTokensOrder."
+  rewardToNativePrices: [BigInt!]!
+  "Native token price at the time of the interaction. Expressed with 18 decimals."
+  nativeToUSDPrice: BigInt!
+}
+
+"""
+An investor position is a record of an investor's position in a CLM.
+"""
+type ClmPosition @entity {
+  "CLM.id + investor address"
+  id: Bytes!
+
+  "The CLM the investor has a position in"
+  clm: CLM!
+  "The investor that has a position in the CLM"
+  investor: Investor!
+  "The transaction that created the investor position"
+  createdWith: Transaction!
+
+  "The amount of manager shares the investor holds"
+  managerBalance: BigInt!
+  "Amount of reward pool shares the investor holds. Ordered by clm.rewardPoolTokensOrder."
+  rewardPoolBalances: [BigInt!]!
+  "Total amount of CLM shares the investor holds. Should always equal to managerBalance + rewardPoolBalance. This is mostly used for filtering."
+  totalBalance: BigInt!
+
+  "All investor position interactions"
+  interactions: [ClmPositionInteraction!]! @derivedFrom(field: "investorPosition")
+
+  "All snapshots of the investor position"
+  snapshots: [ClmPositionSnapshot!]! @derivedFrom(field: "investorPosition")
+}
+
+enum ClmPositionInteractionType {
+  "The investor deposited funds into the CLM"
+  MANAGER_DEPOSIT
+  "The investor withdrew funds from the CLM"
+  MANAGER_WITHDRAW
+  "The investor staked in the reward pool of the CLM and received reward pool shares"
+  CLM_REWARD_POOL_STAKE
+  "The investor unstaked from the reward pool of the CLM and received underlying tokens"
+  CLM_REWARD_POOL_UNSTAKE
+  "The investor claimed their rewards from the reward pool of the CLM"
+  CLM_REWARD_POOL_CLAIM
+}
+
+type ClmPositionInteraction @entity(immutable: true) {
+  "transaction hash + event log index"
+  id: Bytes!
+
+  "The CLM the investor has a position in"
+  clm: CLM!
+  "The investor that has a position in the CLM"
+  investor: Investor!
+  "The investor position the interaction is for"
+  investorPosition: ClmPosition!
+
+  "The transaction that created the investor position interaction"
+  createdWith: Transaction!
+  "Block number of the interaction"
+  blockNumber: BigInt!
+  "The event log index in the transaction that created the interaction."
+  logIndex: BigInt!
+  "The timestamp of the interaction"
+  timestamp: BigInt!
+
+  "The type of the interaction"
+  type: ClmPositionInteractionType!
+
+  "The amount of manager shares the investor holds at the time of the interaction"
+  managerBalance: BigInt!
+  "The amount of reward pool shares the investor holds at the time of the interaction. Ordered by clm.rewardPoolTokensOrder."
+  rewardPoolBalances: [BigInt!]!
+  "Total amount of CLM shares the investor holds. Should always equal to managerBalance + rewardPoolBalance. This is mostly used for filtering."
+  totalBalance: BigInt!
+  "The amount of first underlying tokens the investor is entitled to at the time of the interaction"
+  underlyingBalance0: BigInt!
+  "The amount of second underlying tokens the investor is entitled to at the time of the interaction"
+  underlyingBalance1: BigInt!
+
+  "Amount of manager shares change in the interaction"
+  managerBalanceDelta: BigInt!
+  "Amount of reward pool shares change in the interaction. Ordered by clm.rewardPoolTokensOrder."
+  rewardPoolBalancesDelta: [BigInt!]!
+  "Amount of reward tokens change in the interaction. Ordered by clm.rewardTokensOrder."
+  rewardBalancesDelta: [BigInt!]!
+  """
+  RewardPool from which rewards were claimed.
+  TODO: this is required because rewardBalancesDelta and clm.rewardTokensOrder contains all reward tokens of all potential rewardpools. Maybe rewardBalancesDelta should be  an array of array of bigint. Or smth else altogether.
+  """
+  claimedRewardPool: ClmRewardPool
+  "Amount of underlying token 0 change in the interaction"
+  underlyingBalance0Delta: BigInt!
+  "Amount of underlying token 0 change in the interaction"
+  underlyingBalance1Delta: BigInt!
+
+  "Token 0 price in native at the time of the interaction. Expressed with 18 decimals."
+  token0ToNativePrice: BigInt!
+  "Token 1 price in native at the time of the interaction. Expressed with 18 decimals."
+  token1ToNativePrice: BigInt!
+  "Output token prices in native at the time of the interaction. Expressed with 18 decimals. Ordered by clm.outputTokensOrder."
+  outputToNativePrices: [BigInt!]!
+  "Reward token prices in native at the time of the interaction. Expressed with 18 decimals. Ordered by clm.rewardTokensOrder."
+  rewardToNativePrices: [BigInt!]!
+  "Native token price at the time of the interaction. Expressed with 18 decimals."
+  nativeToUSDPrice: BigInt!
+}
+
+"""
+A snapshot of an investor's CLM position stats.
+Any event that happens to the position is recorded in a snapshot.
+We keep multiple snapshots time frames as noted by the "period" field.
+Snapshots include: daily, weekly, yearly.
+"""
+type ClmPositionSnapshot @entity {
+  "ClmPosition.id + period + timestamp"
+  id: Bytes!
+
+  "The CLM the investor has a position in"
+  clm: CLM!
+  "The investor that has a position in the CLM"
+  investor: Investor!
+  "The investor position the interaction is for"
+  investorPosition: ClmPosition!
+
+  """
+  Duration of the snapshot period in seconds.
+  Available periods:
+  - 1 day: 86400
+  - 1 week: 604800
+  - 1 year: 31536000
+  """
+  period: BigInt!
+  "Timestamp the snapshot was initiated at, rounded to period"
+  roundedTimestamp: BigInt!
+  "Actual timestamp snapshot was initiated at"
+  timestamp: BigInt!
+
+  "The amount of manager shares the investor holds"
+  managerBalance: BigInt!
+  "Amount of reward pool shares the investor holds. Ordered by clm.rewardPoolTokensOrder."
+  rewardPoolBalances: [BigInt!]!
+  "Total amount of CLM shares the investor holds. Should always equal to managerBalance + rewardPoolBalance."
+  totalBalance: BigInt!
+  "The amount of first underlying tokens the investor is entitled to at the time of snapshot"
+  underlyingBalance0: BigInt!
+  "The amount of second underlying tokens the investor is entitled to at the time of snapshot"
+  underlyingBalance1: BigInt!
+
+  "Token 0 price in native at the time of snapshot. Expressed with 18 decimals."
+  token0ToNativePrice: BigInt!
+  "Token 1 price in native at the time of snapshot. Expressed with 18 decimals."
+  token1ToNativePrice: BigInt!
+  "Output token prices in native at the time of snapshot. Ordered by clm.outputTokensOrder. Expressed with 18 decimals."
+  outputToNativePrices: [BigInt!]!
+  "Reward token prices in native at the time of snapshot. Ordered by clm.rewardTokensOrder. Expressed with 18 decimals."
+  rewardToNativePrices: [BigInt!]!
+  "Native token price at the time of snapshot. Expressed with 18 decimals."
+  nativeToUSDPrice: BigInt!
+}
