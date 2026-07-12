@@ -39,3 +39,8 @@ maintainers:
   - FN: API Evangelist
     url: http://apievangelist.com
     email: info@apievangelist.com
+common:
+  - type: DomainSecurity
+    url: security/beefy-finance-domain-security.yml
+  - url: https://medium.com/feed/beefyfinance
+    type: Blog
