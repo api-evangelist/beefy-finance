@@ -19,6 +19,16 @@ specificationVersion: '0.23'
 tags:
   - DeFi
   - Yield Optimizer
+  - Multi-Chain
+  - Blockchain
+  - Ethereum
+  - Arbitrum
+  - Optimism
+  - Polygon
+  - BNB Chain
+tags_raw:
+  - DeFi
+  - Yield Optimizer
   - Multichain
   - Blockchain
   - Ethereum
