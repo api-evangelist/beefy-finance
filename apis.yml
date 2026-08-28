@@ -1,5 +1,16 @@
 name: Beefy Finance
 description: Beefy Finance is a decentralized, multichain yield optimizer platform that allows users to earn compound interest on their crypto holdings through automated vaults and strategies.
+deliveryModel:
+  model: unknown
+  open_source: false
+  commercial: false
+  callable_host: false
+  label: Delivery model not determined — needs a product licence on record
+  confidence: low
+  source:
+  - none
+  generated: '2026-08-28'
+  method: derived
 accessModel:
   pricing: unknown
   onboarding: unknown
