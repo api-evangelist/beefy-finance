@@ -1,4 +1,4 @@
-# Beefy Finance (beefy-finance)
+# Beefy Finance
 
 <!-- API-EVANGELIST-PROVENANCE:BEGIN -->
 > ### About this repository
@@ -66,48 +66,88 @@
 
 Beefy Finance is a decentralized, multichain yield optimizer platform that allows users to earn compound interest on their crypto holdings through automated vaults and strategies.
 
-**APIs.json:** [https://beefy.com](https://beefy.com)
+**Areas:** DeFi · Yield Optimizer · Multi-Chain · Blockchain · Ethereum · Arbitrum · Optimism · Polygon · BNB Chain
 
-## Tags
+## Beefy Finance on APIs.io
 
-- DeFi
-- Yield Optimizer
-- Multichain
-- Blockchain
-- Ethereum
-- Arbitrum
-- Optimism
-- Polygon
-- BNB Chain
+Everything profiled for Beefy Finance is published on APIs.io rather than in this repository. Start at the provider page — **[apis.io/providers/beefy-finance/](https://apis.io/providers/beefy-finance/)** — or go straight to one of the APIs or properties below.
 
-## Timestamps
+### APIs (1)
 
-- **Created:** 2026-06-14
-- **Modified:** 2026-06-14
+- [Beefy Finance GraphQL API](https://apis.io/apis/beefy-finance/beefy-finance-graphql-api/) — GraphQL subgraph API for querying Beefy Finance protocol data including vaults, investors, positions, harvests, and TVL snapshots across multiple chains via…
 
-## APIs
+### Published properties
 
-### Beefy Finance GraphQL API
+Each property below is a page on APIs.io carrying the machine-readable artifact and what it says.
 
-GraphQL subgraph API for querying Beefy Finance protocol data including vaults, investors, positions, harvests, and TVL snapshots across multiple chains via The Graph protocol.
+#### GraphQL (1)
 
-- **Human URL:** [https://beefy.com/](https://beefy.com/)
-- **Base URL:** `https://api.thegraph.com/subgraphs/name/beefyfinance`
+GraphQL schemas.
 
-#### Tags
+- [Beefy Finance GraphQL API](https://apis.io/graphqls/beefy-finance/beefy-finance-graphql/)
 
-- GraphQL
-- Subgraph
-- The Graph
-- DeFi
+#### Security (1)
 
-#### Properties
+Authentication, trust centre, and vulnerability disclosure.
 
-- [Graph Q L](graphql/beefy-finance-graphql.md)
-- [Graph Q L Schema](graphql/beefy-finance-schema.graphql)
+- [Beefy Finance Domain Security](https://apis.io/security/beefy-finance/beefy-finance-domain-security/)
 
-## Maintainers
+## Where to find this API
 
-**FN:** API Evangelist
-**Email:** info@apievangelist.com
-**URL:** http://apievangelist.com
+Links to the company's own pages. This repository publishes no copy of their specifications — the canonical document is theirs and lives at the URLs below.
+
+- [Website](https://beefy.com)
+- [Blog](https://medium.com/feed/beefyfinance)
+
+## API Evangelist rating
+
+**Kin Score 15.4** — emerging · rubric 0.24.0 · scored 2026-10-17
+
+| Facet | Score |
+|---|---|
+| Discoverability | 64.3 |
+| Contract quality | 39.4 |
+| Contract governance | 0.0 |
+| Operational transparency | 0.0 |
+| Developer ergonomics | 2.4 |
+| Access clarity | 0.0 |
+
+**Agent readiness 12.9** — agent-aware
+
+| Agent-readiness dimension | Result |
+|---|---|
+| Spec Presence | yes |
+| Agentic Access | — |
+| Reversibility Documented | — |
+| MCP Server | — |
+| Auth Clarity | — |
+| Idempotency | — |
+| Error Semantics | — |
+| OpenAPI Examples | — |
+| Rate Limit Signal | — |
+| Event Surface Described | — |
+| Agent Skills | — |
+| Well Known Catalog | — |
+| Consent Identity | — |
+| Agent Card | — |
+| Dry Run Mode | — |
+| Delegated Identity | — |
+| Protected Resource Metadata | — |
+| Dynamic Client Registration | — |
+| Agentic Commerce | — |
+
+**Regulatory alignment 5.9** — Horizontal (data, software, accessibility, platform)
+
+The rubric is published at [github.com/api-evangelist/kin-score](https://github.com/api-evangelist/kin-score). The per-check breakdown behind these numbers — which checks were earned, partial or missed — along with score history and how this provider compares to its peers, is available at [apis.io/providers/beefy-finance/](https://apis.io/providers/beefy-finance/).
+
+## How this profile is made
+
+API Evangelist profiles a company's public API surface the way a developer would find it: the website, developer portal and documentation, the specifications it publishes, its public repositories, and its pricing, status and changelog pages. From that it derives the properties above — contracts split per API, workflows, schemas, collections, governance rules, plans and rate limits — and scores them against the published [Kin Score rubric](https://github.com/api-evangelist/kin-score).
+
+The artifacts are published on [APIs.io](https://apis.io), not in this repository. This repository is the public record for Beefy Finance: the place to say something is wrong, missing or out of date, and to ask for a re-score or a removal.
+
+## Open an issue
+
+- **Something about this listing** — a wrong description, a missing API, a stale artifact or a question about the rating: [open an issue on this repository](https://github.com/api-evangelist/beefy-finance/issues/new).
+- **A new API, or one that is not in the catalog yet** — [submit it on APIs.io](https://apis.io/add/).
+- **Anything else** — [the APIs.io inbox](https://github.com/api-search/inbox/issues/new) or [info@apievangelist.com](mailto:info@apievangelist.com).
